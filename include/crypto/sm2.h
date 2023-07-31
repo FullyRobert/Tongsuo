@@ -31,6 +31,11 @@ int ossl_sm2_compute_z_digest(uint8_t *out,
                               size_t id_len,
                               const EC_KEY *key);
 
+BIGNUM *ossl_sm2_compute_msg_hash(const EVP_MD *digest,
+                                  const EC_KEY *key,
+                                  const uint8_t *id,
+                                  const size_t id_len,
+                                  const uint8_t *msg, size_t msg_len);
 /*
  * SM2 signature operation. Computes Z and then signs H(Z || msg) using SM2
  */

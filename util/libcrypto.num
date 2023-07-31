@@ -5546,3 +5546,12 @@ EVP_CIPHER_CTX_get_final_used           5861	3_0_3	EXIST::FUNCTION:
 BN_sm2_mod_256                          5862	3_0_3	EXIST::FUNCTION:SM2
 BN_get0_sm2_prime_256                   5863	3_0_3	EXIST::FUNCTION:SM2
 EC_GFp_sm2p256_method                   5864	3_0_3	EXIST::FUNCTION:DEPRECATEDIN_3_0,EC,EC_SM2P_64_GCC_128,SM2
+SM2_THRESHOLD_MSG_new                   5865	3_0_3	EXIST::FUNCTION:SM2
+SM2_THRESHOLD_MSG_free                  5866	3_0_3	EXIST::FUNCTION:SM2
+SM2_THRESHOLD_partial_pubkey_generate   5867	3_0_3	EXIST::FUNCTION:SM2
+SM2_THRESHOLD_keypair_generate          5868	3_0_3	EXIST::FUNCTION:SM2
+SM2_THRESHOLD_complete_pubkey_generate  5869	3_0_3	EXIST::FUNCTION:SM2
+SM2_THRESHOLD_sign_init                 5870	3_0_3	EXIST::FUNCTION:SM2
+SM2_THRESHOLD_sign_update               5871	3_0_3	EXIST::FUNCTION:SM2
+SM2_THRESHOLD_sign_final                5872	3_0_3	EXIST::FUNCTION:SM2
+SM2_THRESHOLD_verify                    5873	3_0_3	EXIST::FUNCTION:SM2

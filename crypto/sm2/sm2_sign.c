@@ -199,6 +199,15 @@ static BIGNUM *sm2_compute_msg_hash(const EVP_MD *digest,
     return e;
 }
 
+BIGNUM *ossl_sm2_compute_msg_hash(const EVP_MD *digest,
+                                  const EC_KEY *key,
+                                  const uint8_t *id,
+                                  const size_t id_len,
+                                  const uint8_t *msg, size_t msg_len)
+{
+    return sm2_compute_msg_hash(digest, key, id, id_len, msg, msg_len);
+}
+
 static ECDSA_SIG *sm2_sig_gen(const EC_KEY *key, const BIGNUM *e)
 {
     const BIGNUM *dA = EC_KEY_get0_private_key(key);
