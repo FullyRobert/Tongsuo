@@ -12,7 +12,7 @@
 
 # include <openssl/opensslconf.h>
 
-# if !defined(OPENSSL_NO_SM2) && !defined(FIPS_MODULE)
+# if !defined(OPENSSL_NO_SM2_THRESHOLD) && !defined(FIPS_MODULE)
 
 #  include <openssl/ec.h>
 /********************************************************************/

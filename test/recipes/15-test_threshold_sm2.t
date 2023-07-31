@@ -13,4 +13,7 @@ use OpenSSL::Test::Utils;
 
 setup("test_threshold_sm2");
 
+plan skip_all => "This test is unsupported in a no-sm2_threshold build"
+    if disabled("sm2_threshold");
+
 simple_test("test_threshold_sm2", "sm2_threshold_test", "sm2");

@@ -21,7 +21,7 @@
 #include <openssl/ec.h>
 #include "testutil.h"
 
-#ifndef OPENSSL_NO_SM2
+#ifndef OPENSSL_NO_SM2_THRESHOLD
 
 # include <openssl/sm2_threshold.h>
 
@@ -130,7 +130,7 @@ err:
 
 int setup_tests(void)
 {
-#ifdef OPENSSL_NO_SM2
+#ifdef OPENSSL_NO_SM2_THRESHOLD
     TEST_note("SM2 threshold is disabled.");
 #else
     ADD_TEST(sm2_threshold_keygen_test);
