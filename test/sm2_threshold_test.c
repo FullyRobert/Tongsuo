@@ -25,7 +25,7 @@
 
 # include <openssl/sm2_threshold.h>
 
-/* These values are from GM/T 0003.2-2012 standard. */
+/* These values are from GM/T 0003.2-2012 standard */
 static const char *userid = "ALICE123@YAHOO.COM";
 static const char *message = "message digest";
 
@@ -51,13 +51,13 @@ static int sm2_threshold_keygen_test(void)
     
     /*
      * Generate a complete threshold public key using partial 
-     * public key from another participant. 
+     * public key from another participant
      */
-    if (!TEST_ptr(complete_key1 = SM2_THRESHOLD_complete_pubkey_generate(key1, key2))
-            || !TEST_ptr(complete_key2 = SM2_THRESHOLD_complete_pubkey_generate(key2, key1)))
+    if (!TEST_ptr(complete_key1 = SM2_THRESHOLD_complete_keypair_generate(key1, key2))
+            || !TEST_ptr(complete_key2 = SM2_THRESHOLD_complete_keypair_generate(key2, key1)))
         goto err;
 
-    /* Compare if two complete public keys are equal. */
+    /* Compare if two complete public keys are equal */
     if (!TEST_false(EC_POINT_cmp(group, EC_KEY_get0_public_key(complete_key1), EC_KEY_get0_public_key(complete_key2), NULL)))
         goto err;
 
@@ -71,7 +71,7 @@ err:
     return testresult;
 }
 
-static int sm2_threshold_sign_test(void)
+static int sm2_threshold_sign_test(int flag)
 {
     int msg_len = strlen(message);
     int verify_status1 = 0 , verify_status2 = 0;
@@ -81,35 +81,54 @@ static int sm2_threshold_sign_test(void)
     BIGNUM *w1 = BN_new();
     SM2_THRESHOLD_MSG *sign_msg = SM2_THRESHOLD_MSG_new();
 
-    /* Generate SM2 threshold private key with partial public key. */
+    /* Generate SM2 threshold private key with partial public key */
     if (!TEST_ptr(key1 = SM2_THRESHOLD_keypair_generate())
             || !TEST_ptr(key2 = SM2_THRESHOLD_keypair_generate()))
         goto err;        
 
     /*
      * Generate a complete threshold public key using partial 
-     * public key from another participant. 
+     * public key from another participant
      */
-    if (!TEST_ptr(complete_key1 = SM2_THRESHOLD_complete_pubkey_generate(key1, key2))
-            || !TEST_ptr(complete_key2 = SM2_THRESHOLD_complete_pubkey_generate(key2, key1)))
+    if (!TEST_ptr(complete_key1 = SM2_THRESHOLD_complete_keypair_generate(key1, key2))
+            || !TEST_ptr(complete_key2 = SM2_THRESHOLD_complete_keypair_generate(key2, key1)))
         goto err;
 
-    /* SM2 threshold signature */
-    if (!TEST_true(SM2_THRESHOLD_sign_init(complete_key1, EVP_sm3(), (const uint8_t *)userid,
-                                           strlen(userid), (const uint8_t *)message, msg_len,
-                                           w1, sign_msg))
-            || !TEST_true(SM2_THRESHOLD_sign_update(complete_key2, sign_msg, partial_sig))
-            || !TEST_true(SM2_THRESHOLD_sign_final(complete_key1, w1, partial_sig, sig)))
-        goto err;
+    /* Test SM2 threshold sign with id */
+    if (flag == 0) {
+        /* SM2 threshold signature */
+        if (!TEST_true(SM2_THRESHOLD_sign_init(complete_key1, EVP_sm3(), (const uint8_t *)userid,
+                                               strlen(userid), (const uint8_t *)message, msg_len,
+                                               w1, sign_msg))
+                || !TEST_true(SM2_THRESHOLD_sign_update(complete_key2, sign_msg, partial_sig))
+                || !TEST_true(SM2_THRESHOLD_sign_final(complete_key1, w1, partial_sig, sig)))
+            goto err;
 
-    /* Verify signature using complete threshold public key. */
-    verify_status1 = SM2_THRESHOLD_verify(complete_key1, EVP_sm3(), sig, (const uint8_t *)userid,
-                                          strlen(userid), (const uint8_t *)message, msg_len);
-    verify_status2 = SM2_THRESHOLD_verify(complete_key2, EVP_sm3(), sig, (const uint8_t *)userid,
-                                          strlen(userid), (const uint8_t *)message, msg_len);
+        /* Verify signature using complete threshold public key */
+        verify_status1 = SM2_THRESHOLD_verify(complete_key1, EVP_sm3(), sig, (const uint8_t *)userid,
+                                              strlen(userid), (const uint8_t *)message, msg_len);
+        verify_status2 = SM2_THRESHOLD_verify(complete_key2, EVP_sm3(), sig, (const uint8_t *)userid,
+                                              strlen(userid), (const uint8_t *)message, msg_len);
+    }
+    /* Test SM2 threshold sign without id */
+    else {
+        /* SM2 threshold signature */
+        if (!TEST_true(SM2_THRESHOLD_sign_init(complete_key1, EVP_sm3(), NULL, 0,
+                                               (const uint8_t *)message, msg_len,
+                                               w1, sign_msg))
+                || !TEST_true(SM2_THRESHOLD_sign_update(complete_key2, sign_msg, partial_sig))
+                || !TEST_true(SM2_THRESHOLD_sign_final(complete_key1, w1, partial_sig, sig)))
+            goto err;
+
+        /* Verify signature using complete threshold public key */
+        verify_status1 = SM2_THRESHOLD_verify(complete_key1, EVP_sm3(), sig, NULL, 0,
+                                              (const uint8_t *)message, msg_len);
+        verify_status2 = SM2_THRESHOLD_verify(complete_key2, EVP_sm3(), sig, NULL, 0,
+                                              (const uint8_t *)message, msg_len);
+    }
 
     /* Both complete public keys from two parties should be able to 
-     * verify the signature successfully. 
+     * verify the signature successfully with the same id
      */
     TEST_true(verify_status1 && verify_status2);
 
@@ -134,7 +153,7 @@ int setup_tests(void)
     TEST_note("SM2 threshold is disabled.");
 #else
     ADD_TEST(sm2_threshold_keygen_test);
-    ADD_TEST(sm2_threshold_sign_test);
+    ADD_ALL_TESTS(sm2_threshold_sign_test, 2);
 #endif
     return 1;
 }

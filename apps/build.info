@@ -67,6 +67,10 @@ IF[{- !$disabled{'bulletproofs'} -}]
   $OPENSSLSRC=$OPENSSLSRC bulletproofs.c
 ENDIF
 
+IF[{- !$disabled{'sm2_threshold'} -}]
+  $OPENSSLSRC=$OPENSSLSRC sm2_threshold.c
+ENDIF
+
 IF[{- !$disabled{apps} -}]
   PROGRAMS=openssl
   SOURCE[openssl]=$INITSRC $OPENSSLSRC

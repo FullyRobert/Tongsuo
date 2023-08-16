@@ -43,16 +43,6 @@ void SM2_THRESHOLD_MSG_free(SM2_THRESHOLD_MSG *msg)
     OPENSSL_free(msg);
 }
 
-static const BIGNUM *SM2_THRESHOLD_MSG_get0_e(const SM2_THRESHOLD_MSG *msg)
-{
-    return msg->e;
-}
-
-static const EC_POINT *SM2_THRESHOLD_MSG_get0_Q1(const SM2_THRESHOLD_MSG *msg)
-{
-    return msg->Q1;
-}
-
 static int SM2_THRESHOLD_MSG_set0(SM2_THRESHOLD_MSG *msg,
                                   BIGNUM *e , EC_POINT *Q1)
 {
@@ -65,6 +55,119 @@ static int SM2_THRESHOLD_MSG_set0(SM2_THRESHOLD_MSG *msg,
     msg->Q1 = Q1;
 
     return 1;
+}
+
+size_t SM2_THRESHOLD_MSG_encode(EC_KEY *key, SM2_THRESHOLD_MSG *msg,
+                                unsigned char *out, size_t size)
+{
+    size_t ret = 0, Q1_len = 0, e_len = 0, len = 0;
+    unsigned char *p = out;
+    BN_CTX *ctx = NULL;
+
+    if (key == NULL || msg == NULL) {
+        ERR_raise(ERR_LIB_SM2, ERR_R_PASSED_NULL_PARAMETER);
+        return ret;
+    }
+
+    ctx = BN_CTX_new();
+    if (ctx == NULL) {
+        ERR_raise(ERR_LIB_SM2, ERR_R_MALLOC_FAILURE);
+        goto end;
+    }
+
+    e_len = DIGEST_LENGTH;
+    Q1_len = EC_POINT_point2oct(EC_KEY_get0_group(key), msg->Q1,
+                                EC_KEY_get_conv_form(key), NULL, 0, ctx);
+    len = Q1_len + e_len;
+
+    /* If out is NULL, return number of bytes needed */
+    if (out == NULL) {
+        ret = len;
+        goto end;
+    }
+    else {
+        if (size < len) {
+            ERR_raise(ERR_LIB_SM2, SM2_R_BUFFER_TOO_SMALL);
+            goto end;
+        }
+
+        if (BN_bn2binpad(msg->e, p, e_len) == -1) {
+            ERR_raise(ERR_LIB_SM2, ERR_R_INTERNAL_ERROR);
+            goto end;
+        }
+
+        /* Move pointer to next position */
+        p += e_len;
+        
+        if (!EC_POINT_point2oct(EC_KEY_get0_group(key), msg->Q1,
+                                EC_KEY_get_conv_form(key), p, Q1_len, ctx))
+            goto end;
+        
+        ret = len;
+    }
+
+end:
+    BN_CTX_free(ctx);
+    return ret;
+}
+
+int SM2_THRESHOLD_MSG_decode(EC_KEY *key, SM2_THRESHOLD_MSG *msg,
+                             const unsigned char *in, size_t size)
+{
+    int ret = 0;
+    size_t e_len = 0, Q1_len = 0;
+    const unsigned char *p = in;
+    EC_POINT *Q1 = NULL;
+    BIGNUM *e = NULL;
+    BN_CTX *ctx = NULL;
+
+    if (key == NULL || msg == NULL) {
+        ERR_raise(ERR_LIB_SM2, ERR_R_PASSED_NULL_PARAMETER);
+        return ret;
+    }
+
+    Q1 = EC_POINT_new(EC_KEY_get0_group(key));
+    e = BN_new();
+    ctx = BN_CTX_new();
+    if (Q1 == NULL || e == NULL || ctx == NULL) {
+        ERR_raise(ERR_LIB_SM2, ERR_R_MALLOC_FAILURE);
+        goto end;
+    }
+
+    e_len = DIGEST_LENGTH;
+
+    if (size <= e_len) {
+        ERR_raise(ERR_LIB_SM2, SM2_R_BUFFER_TOO_SMALL);
+        goto end;
+    }
+
+    Q1_len = size - e_len;
+
+    if (!BN_bin2bn(p, e_len, e)) {
+        ERR_raise(ERR_LIB_SM2, ERR_R_BN_LIB);
+        goto end;
+    }
+    
+    /* Move pointer to next position */
+    p += e_len;
+
+    if (!EC_POINT_oct2point(EC_KEY_get0_group(key), Q1, p, Q1_len, ctx))
+        goto end;
+    
+    if (!SM2_THRESHOLD_MSG_set0(msg, e, Q1)) {
+        ERR_raise(ERR_LIB_SM2, ERR_R_INTERNAL_ERROR);
+        goto end;
+    }
+    
+    ret = 1;
+end:
+    if (ret == 0) {
+        BN_free(e);
+        EC_POINT_free(Q1);
+    }
+    
+    BN_CTX_free(ctx);
+    return ret;
 }
 
 int SM2_THRESHOLD_partial_pubkey_generate(EC_KEY *key)
@@ -128,8 +231,8 @@ EC_KEY *SM2_THRESHOLD_keypair_generate(void)
     return key;
 }
 
-EC_KEY *SM2_THRESHOLD_complete_pubkey_generate(const EC_KEY *key, 
-                                               const EC_KEY *pkey)
+EC_KEY *SM2_THRESHOLD_complete_keypair_generate(const EC_KEY *key, 
+                                                const EC_KEY *pkey)
 {
     int ret = 0;
     const BIGNUM *dA = EC_KEY_get0_private_key(key);
@@ -300,7 +403,7 @@ int SM2_THRESHOLD_sign_update(const EC_KEY *key, const SM2_THRESHOLD_MSG *msg,
         goto done;
     }
 
-    Q1 = EC_POINT_dup(SM2_THRESHOLD_MSG_get0_Q1(msg), group);
+    Q1 = EC_POINT_dup(msg->Q1, group);
     Q = EC_POINT_new(group);
     ctx = BN_CTX_new_ex(libctx);
     if (Q == NULL || ctx == NULL || Q1 == NULL) {
@@ -350,7 +453,7 @@ int SM2_THRESHOLD_sign_update(const EC_KEY *key, const SM2_THRESHOLD_MSG *msg,
     }
     
     if (!EC_POINT_get_affine_coordinates(group, Q, x1, NULL,ctx)
-            || !BN_mod_add(r, SM2_THRESHOLD_MSG_get0_e(msg), x1, order, ctx)) {
+            || !BN_mod_add(r, msg->e, x1, order, ctx)) {
         ERR_raise(ERR_LIB_SM2, ERR_R_INTERNAL_ERROR);
         goto done;
     }
