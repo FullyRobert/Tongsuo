@@ -130,20 +130,20 @@ int main(void)
         fprintf(stdout, "Iteration %d: ", i);
 
         /* create a pair of SM2 pub and priv keys, this is new in 8.4.0 */
-        start = get_time();
         sm2_ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_SM2, NULL);
         if (sm2_ctx == NULL) {
             goto err;
         }
+        start = get_time();
         if (!EVP_PKEY_keygen_init(sm2_ctx)) {
             goto err;
         }
         if (!EVP_PKEY_keygen(sm2_ctx, &sm2_key)) {
             goto err;
         }
+        end = get_time();
         EVP_PKEY_CTX_free(sm2_ctx);
         sm2_ctx = NULL;
-        end = get_time();
         /* We simply calculate "1sec / one-key's-usec" as the result */
         indices[i].sm2_keygen = 1000 * 1000 / (end - start);
 
